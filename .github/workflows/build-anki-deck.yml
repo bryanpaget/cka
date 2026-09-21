@@ -1,0 +1,118 @@
+name: Build Anki Deck
+
+# Note: a single `push` event applies its `paths` filter to tag pushes too,
+# which would stop a `v*` tag from triggering a release. To keep the intent
+# (build on relevant file changes, AND release on v* tags), we run on all
+# branch/tag pushes and let each job decide via `if:` whether to act.
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "anki/cka-cards.tsv"
+      - "anki/build_apkg.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deck
+        working-directory: anki
+        run: |
+          python3 build_apkg.py cka-cards.tsv CKA-Deck.apkg
+
+      - name: Verify deck (zip + sqlite + counts)
+        run: |
+          python3 - <<'PY'
+          import zipfile, sqlite3, tempfile, os, sys
+
+          apkg = "anki/CKA-Deck.apkg"
+
+          # 1. Valid zip containing the expected members.
+          if not zipfile.is_zipfile(apkg):
+              sys.exit("FAIL: not a valid zip: %s" % apkg)
+          with zipfile.ZipFile(apkg) as zf:
+              names = set(zf.namelist())
+              for required in ("collection.anki2", "media"):
+                  if required not in names:
+                      sys.exit("FAIL: missing %s in apkg" % required)
+              tmp = tempfile.mkdtemp()
+              zf.extract("collection.anki2", tmp)
+
+          # 2. Valid SQLite with matching note/card counts.
+          db = os.path.join(tmp, "collection.anki2")
+          con = sqlite3.connect(db)
+          notes = con.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+          cards = con.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+          con.close()
+
+          # 3. Cross-check against the TSV source (non-comment, non-empty lines).
+          with open("anki/cka-cards.tsv", encoding="utf-8") as fh:
+              expected = sum(
+                  1 for line in fh
+                  if line.strip() and not line.startswith("#")
+              )
+
+          print("notes=%d cards=%d expected=%d" % (notes, cards, expected))
+          if not (notes == cards == expected):
+              sys.exit("FAIL: count mismatch")
+          print("OK: deck verified with %d cards." % cards)
+          PY
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CKA-Deck
+          path: anki/CKA-Deck.apkg
+
+      - name: Auto-commit rebuilt deck
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- anki/CKA-Deck.apkg; then
+            git add anki/CKA-Deck.apkg
+            git commit -m "ci: rebuild CKA-Deck.apkg"
+            git push
+          else
+            echo "No deck changes to commit."
+          fi
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deck
+        working-directory: anki
+        run: python3 build_apkg.py cka-cards.tsv CKA-Deck.apkg
+
+      - name: Publish release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: anki/CKA-Deck.apkg
