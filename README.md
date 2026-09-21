@@ -10,7 +10,9 @@ Everything I use to prep for the Certified Kubernetes Administrator (CKA) exam: 
 | [`CKA-Drill-Book.md`](CKA-Drill-Book.md) | 36 hands-on drills (Task -> Solution -> Verify -> Reset), scoring, 6-week plan. |
 | [`anki/cka-cards.tsv`](anki/cka-cards.tsv) | 62 flashcards, tab-separated (`Front`, `Back`, `tags`). |
 | [`anki/build_apkg.py`](anki/build_apkg.py) | Zero-dependency `.apkg` builder (Python stdlib only). |
-| `anki/CKA-Deck.apkg` | The generated deck. Run the builder to (re)create it. |
+| [`anki/verify_apkg.py`](anki/verify_apkg.py) | Validates a built deck (zip + sqlite + card counts). |
+| [`Makefile`](Makefile) | `make` to build + sync + verify. `make help` lists targets. |
+| `anki/CKA-Deck.apkg` | The generated deck. Run `make build` to (re)create it. |
 | [`docs/index.html`](docs/index.html) | GitHub Pages flashcard reviewer: random card, tap to flip. |
 | `docs/cka-cards.tsv` | Pages copy of the cards (auto-synced by the builder; do not hand-edit). |
 | `.github/workflows/build-anki-deck.yml` | CI: rebuilds, verifies, and checks the docs/ copy is in sync. |
@@ -44,13 +46,27 @@ Troubleshooting is the single biggest slice. Spend your drill time accordingly.
 
 **Import:** open Anki -> *File > Import* -> select `anki/CKA-Deck.apkg`. Re-importing an updated deck **updates** cards instead of duplicating them (IDs are content-derived).
 
-**Regenerate** after editing `anki/cka-cards.tsv`:
+**Regenerate** after editing `anki/cka-cards.tsv`. One command rebuilds the deck, syncs the web reviewer's copy in `docs/`, and verifies everything:
+```bash
+make            # build + sync docs/ + verify + check sync
+```
+Then review the diff and commit `anki/CKA-Deck.apkg` and `docs/cka-cards.tsv`.
+
+Other targets (`make help` lists them):
+```bash
+make build      # just rebuild the deck + sync docs/
+make verify     # validate the .apkg (zip + sqlite + card counts)
+make check-sync # fail if docs/ card copy drifted from the source
+make serve      # preview the web reviewer at http://localhost:8000
+```
+
+Prefer no make? The builder alone does the build + sync:
 ```bash
 python3 anki/build_apkg.py
 # -> Wrote .../CKA-Deck.apkg with 62 cards.
 # -> Synced .../docs/cka-cards.tsv
 ```
-This rebuilds the deck AND syncs the web reviewer's copy in `docs/`. Commit both `anki/CKA-Deck.apkg` and `docs/cka-cards.tsv`. No pip installs: the builder uses only the Python standard library to assemble the `.apkg` (a ZIP of a SQLite `collection.anki2` in Anki schema v11 plus a `media` file).
+No pip installs: the builder uses only the Python standard library to assemble the `.apkg` (a ZIP of a SQLite `collection.anki2` in Anki schema v11 plus a `media` file).
 
 ## Web reviewer (GitHub Pages)
 

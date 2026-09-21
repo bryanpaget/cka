@@ -40,42 +40,7 @@ jobs:
           python3 build_apkg.py cka-cards.tsv CKA-Deck.apkg
 
       - name: Verify deck (zip + sqlite + counts)
-        run: |
-          python3 - <<'PY'
-          import zipfile, sqlite3, tempfile, os, sys
-
-          apkg = "anki/CKA-Deck.apkg"
-
-          # 1. Valid zip containing the expected members.
-          if not zipfile.is_zipfile(apkg):
-              sys.exit("FAIL: not a valid zip: %s" % apkg)
-          with zipfile.ZipFile(apkg) as zf:
-              names = set(zf.namelist())
-              for required in ("collection.anki2", "media"):
-                  if required not in names:
-                      sys.exit("FAIL: missing %s in apkg" % required)
-              tmp = tempfile.mkdtemp()
-              zf.extract("collection.anki2", tmp)
-
-          # 2. Valid SQLite with matching note/card counts.
-          db = os.path.join(tmp, "collection.anki2")
-          con = sqlite3.connect(db)
-          notes = con.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-          cards = con.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
-          con.close()
-
-          # 3. Cross-check against the TSV source (non-comment, non-empty lines).
-          with open("anki/cka-cards.tsv", encoding="utf-8") as fh:
-              expected = sum(
-                  1 for line in fh
-                  if line.strip() and not line.startswith("#")
-              )
-
-          print("notes=%d cards=%d expected=%d" % (notes, cards, expected))
-          if not (notes == cards == expected):
-              sys.exit("FAIL: count mismatch")
-          print("OK: deck verified with %d cards." % cards)
-          PY
+        run: python3 anki/verify_apkg.py anki/CKA-Deck.apkg anki/cka-cards.tsv
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
