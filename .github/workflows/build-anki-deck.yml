@@ -14,10 +14,13 @@ on:
     paths:
       - "anki/cka-cards.tsv"
       - "anki/build_apkg.py"
+      - "docs/cka-cards.tsv"
   workflow_dispatch:
 
+# Least privilege: the build job only needs to read. Only the release job
+# (which uploads a release asset on v* tags) needs write access.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -80,18 +83,18 @@ jobs:
           name: CKA-Deck
           path: anki/CKA-Deck.apkg
 
-      - name: Auto-commit rebuilt deck
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+      # Guard: the reviewer's docs/cka-cards.tsv must match the source TSV.
+      # Regenerate locally with `python3 anki/build_apkg.py` (it rebuilds the
+      # deck AND syncs docs/) and commit both. CI only verifies; it never
+      # commits on your behalf.
+      - name: Check docs/ card copy is in sync
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- anki/CKA-Deck.apkg; then
-            git add anki/CKA-Deck.apkg
-            git commit -m "ci: rebuild CKA-Deck.apkg"
-            git push
-          else
-            echo "No deck changes to commit."
+          if ! diff -q anki/cka-cards.tsv docs/cka-cards.tsv; then
+            echo "docs/cka-cards.tsv is out of sync with anki/cka-cards.tsv."
+            echo "Run: python3 anki/build_apkg.py  then commit docs/cka-cards.tsv"
+            exit 1
           fi
+          echo "docs/ card copy in sync."
 
   release:
     needs: build

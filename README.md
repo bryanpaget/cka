@@ -11,8 +11,9 @@ Everything I use to prep for the Certified Kubernetes Administrator (CKA) exam: 
 | [`anki/cka-cards.tsv`](anki/cka-cards.tsv) | 62 flashcards, tab-separated (`Front`, `Back`, `tags`). |
 | [`anki/build_apkg.py`](anki/build_apkg.py) | Zero-dependency `.apkg` builder (Python stdlib only). |
 | `anki/CKA-Deck.apkg` | The generated deck. Run the builder to (re)create it. |
-| [`index.html`](index.html) | GitHub Pages flashcard reviewer: random card, tap to flip. |
-| `.github/workflows/build-anki-deck.yml` | CI: rebuilds, verifies, and publishes the deck. |
+| [`docs/index.html`](docs/index.html) | GitHub Pages flashcard reviewer: random card, tap to flip. |
+| `docs/cka-cards.tsv` | Pages copy of the cards (auto-synced by the builder; do not hand-edit). |
+| `.github/workflows/build-anki-deck.yml` | CI: rebuilds, verifies, and checks the docs/ copy is in sync. |
 
 ## Domains & weights
 
@@ -45,14 +46,17 @@ Troubleshooting is the single biggest slice. Spend your drill time accordingly.
 
 **Regenerate** after editing `anki/cka-cards.tsv`:
 ```bash
-cd anki && python3 build_apkg.py
+python3 anki/build_apkg.py
 # -> Wrote .../CKA-Deck.apkg with 62 cards.
+# -> Synced .../docs/cka-cards.tsv
 ```
-No pip installs. The builder uses only the Python standard library to assemble the `.apkg` (a ZIP of a SQLite `collection.anki2` in Anki schema v11 plus a `media` file).
+This rebuilds the deck AND syncs the web reviewer's copy in `docs/`. Commit both `anki/CKA-Deck.apkg` and `docs/cka-cards.tsv`. No pip installs: the builder uses only the Python standard library to assemble the `.apkg` (a ZIP of a SQLite `collection.anki2` in Anki schema v11 plus a `media` file).
 
 ## Web reviewer (GitHub Pages)
 
-Enable Pages on this repo (Settings -> Pages -> deploy from `main`, root). Then visit the Pages URL: it loads `anki/cka-cards.tsv`, shows a random card, and flips on tap/click. Space or the button pulls the next random card. Nothing to install.
+The site lives in [`docs/`](docs/). Enable Pages on this repo: **Settings > Pages > Deploy from a branch**, branch `main`, folder **`/docs`**. Then visit the Pages URL: `docs/index.html` loads `docs/cka-cards.tsv`, shows a random card, and flips on tap/click. Space/Enter flips, right-arrow (or the button) pulls the next random card. Nothing to install.
+
+`docs/cka-cards.tsv` is a synced copy of `anki/cka-cards.tsv` (Pages only serves files under `docs/`). You edit `anki/cka-cards.tsv`; running the builder copies it into `docs/` for you. The `.nojekyll` file in `docs/` tells Pages to serve the files as-is without Jekyll.
 
 ## Mnemonic cheat-sheet
 

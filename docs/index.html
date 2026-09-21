@@ -160,7 +160,10 @@
 </footer>
 
 <script>
-  var TSV_URL = "anki/cka-cards.tsv";
+  // Served from docs/ on GitHub Pages; the cards live right next to this file.
+  // docs/cka-cards.tsv is kept in sync with anki/cka-cards.tsv (the source you edit)
+  // by build_apkg.py and the CI workflow.
+  var TSV_URL = "cka-cards.tsv";
   var cards = [];
   var current = -1;
   var revealed = false;

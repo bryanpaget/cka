@@ -445,6 +445,19 @@ def main(argv):
 
     count = build_apkg(tsv_path, out_path)
     print("Wrote %s with %d cards." % (out_path, count))
+
+    # Keep the GitHub Pages reviewer's copy of the cards in sync with the
+    # single source of truth (this TSV). docs/cka-cards.tsv is what index.html
+    # fetches, since Pages only serves files under docs/.
+    repo_root = os.path.dirname(here)
+    docs_tsv = os.path.join(repo_root, "docs", "cka-cards.tsv")
+    if os.path.isdir(os.path.dirname(docs_tsv)):
+        with open(tsv_path, "r", encoding="utf-8") as src:
+            data = src.read()
+        with open(docs_tsv, "w", encoding="utf-8") as dst:
+            dst.write(data)
+        print("Synced %s" % docs_tsv)
+
     return 0
 
 
