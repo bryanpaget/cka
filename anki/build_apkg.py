@@ -63,17 +63,26 @@ hr#answer {
   border-top: 2px solid #326ce5;
   margin: 14px 0;
 }
-code, pre {
+code {
   font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
   background: #eceff4;
   border-radius: 4px;
+  padding: 1px 5px;
 }
-code { padding: 1px 5px; }
 pre {
-  padding: 12px;
-  overflow-x: auto;
+  font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+  background: #1e2430;
+  color: #e6edf3;
+  border-radius: 8px;
   border-left: 3px solid #326ce5;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 0.86em;
+  line-height: 1.45;
 }
+pre code { background: none; padding: 0; color: inherit; }
+ol, ul { margin: 8px 0; padding-left: 22px; }
+li { margin: 3px 0; }
 b, strong { color: #204080; }
 """
 
